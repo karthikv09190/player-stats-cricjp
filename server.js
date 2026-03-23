@@ -9,7 +9,13 @@ const puppeteer = require('puppeteer')
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors())
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://karthikv09190.github.io',
+  ]
+}))
 app.use(express.json())
 
 // CricClubs uses <th> for ALL cells (both header and data rows).
