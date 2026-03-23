@@ -1,8 +1,0 @@
-node_modules
-.cache
-dist
-.vite
-.env
-.DS_Store
-.git
-.claude
