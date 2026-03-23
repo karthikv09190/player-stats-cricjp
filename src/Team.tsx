@@ -85,7 +85,7 @@ export default function Team() {
     const league = getLeague()
     const clubId = getClubId()
 
-    await Promise.all(players.map(async (p) => {
+    for (const p of players) {
       setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'loading' } : x))
       try {
         const url = `https://cricclubs.com/${league}/viewPlayer.do?playerId=${p.id}&clubId=${clubId}`
@@ -96,10 +96,11 @@ export default function Team() {
         const runs = (s.batting || []).reduce((a: number, r: Record<string, string>) => a + (parseInt(r['runs']) || 0), 0)
         const wkts = (s.bowling || []).reduce((a: number, r: Record<string, string>) => a + (parseInt(r['wkts']) || 0), 0)
         setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'done', runs, wkts, name: s.name || p.id } : x))
-      } catch {
+      } catch (err) {
+        console.error(`Error fetching player ${p.id}:`, err)
         setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'error' } : x))
       }
-    }))
+    }
 
     setFetching(false)
     setShowLineup(true)

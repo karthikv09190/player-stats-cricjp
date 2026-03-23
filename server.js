@@ -126,6 +126,14 @@ async function fetchWithPuppeteer(url, cookieHeader) {
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     )
 
+    // Optimization: Skip images, CSS, and fonts to save RAM/Time
+    await page.setRequestInterception(true)
+    page.on('request', (req) => {
+      const type = req.resourceType()
+      if (['image', 'stylesheet', 'font', 'media'].includes(type)) req.abort()
+      else req.continue()
+    })
+
     if (cookieHeader && cookieHeader.trim()) {
       const parsedUrl = new URL(url)
       const cookies = cookieHeader.split(';').map(part => {
@@ -135,7 +143,7 @@ async function fetchWithPuppeteer(url, cookieHeader) {
       if (cookies.length > 0) await page.setCookie(...cookies)
     }
 
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 })
 
     const title = await page.title()
     if (title.includes('Just a moment')) {
