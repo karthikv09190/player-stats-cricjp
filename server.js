@@ -4,7 +4,9 @@ import cors from 'cors'
 import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
-const puppeteer = require('puppeteer')
+const puppeteer = require('puppeteer-extra')
+const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+puppeteer.use(StealthPlugin())
 
 const app = express()
 const PORT = process.env.PORT || 3001
