@@ -14,10 +14,12 @@ interface Player {
 function getLeague() { return localStorage.getItem('cc_league') || 'cricketorjp' }
 function getClubId() { return localStorage.getItem('cc_clubId') || '21278' }
 
-function PlayerCard({ p }: { p: Player }) {
+function PlayerCard({ p, num }: { p: Player; num: number }) {
   const borderColor = p.status === 'done' ? '#c8a84b' : p.status === 'loading' ? '#f0c040' : '#2255aa'
   return (
     <div style={{ background: 'linear-gradient(170deg,#1a3a7a 0%,#0d1e4a 60%,#0a1530 100%)', border: `2px solid ${borderColor}`, borderRadius: 10, padding: '0.5rem 0.5rem 0.7rem', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', minWidth: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+      {/* Number badge */}
+      <div style={{ position: 'absolute', top: 6, left: 6, background: '#cc2233', color: '#fff', fontFamily: 'Oswald,sans-serif', fontWeight: 700, fontSize: '0.85rem', width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>{num}</div>
 
       {/* Photo */}
       <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', border: '3px solid #c8a84b', background: '#1a3a7a', margin: '0.3rem 0 0.5rem', flexShrink: 0, position: 'relative' }}>
@@ -200,7 +202,7 @@ export default function Team() {
           {/* Row 1 — 6 players */}
           {row1.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${row1.length}, 1fr)`, gap: '0.6rem', marginBottom: '0.8rem' }}>
-              {row1.map((p, i) => <PlayerCard key={p.id} p={p} />)}
+              {row1.map((p, i) => <PlayerCard key={p.id} p={p} num={i + 1} />)}
             </div>
           )}
 
@@ -209,7 +211,7 @@ export default function Team() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem' }}>
               {row2.map((p, i) => (
                 <div key={p.id} style={{ width: `calc((100% - ${(row1.length - 1) * 0.6}rem) / ${row1.length})`, minWidth: 0, maxWidth: 160 }}>
-                  <PlayerCard p={p} />
+                  <PlayerCard p={p} num={row1.length + i + 1} />
                 </div>
               ))}
             </div>
