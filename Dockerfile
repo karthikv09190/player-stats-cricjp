@@ -1,5 +1,5 @@
 # Use official Node.js image with Slim-Debian to avoid bulky OS
-FROM node:20-slim
+FROM node:22-slim
 
 # Install necessary libraries for Puppeteer/Chrome to run on Linux
 RUN apt-get update \
