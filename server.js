@@ -190,4 +190,5 @@ app.get('/health', (_, res) => res.json({ ok: true }))
 
 app.listen(PORT, () => {
   console.log(`✅ CricClubs proxy server running at http://localhost:${PORT}`)
+  console.log(`🔍 Puppeteer executable path: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'default'}`)
 })
