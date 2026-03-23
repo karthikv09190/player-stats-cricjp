@@ -207,7 +207,7 @@ app.get('/health', (_, res) => res.json({ ok: true }))
 const distPath = join(__dirname, 'dist')
 if (existsSync(distPath)) {
   app.use(express.static(distPath))
-  app.get('*', (req, res) => res.sendFile(join(distPath, 'index.html')))
+  app.get('(.*)', (req, res) => res.sendFile(join(distPath, 'index.html')))
 }
 
 app.listen(PORT, () => {
