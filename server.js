@@ -125,7 +125,7 @@ async function fetchWithPuppeteer(url, cookieHeader) {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled'],
   })
 
   try {
@@ -151,14 +151,8 @@ async function fetchWithPuppeteer(url, cookieHeader) {
       if (cookies.length > 0) await page.setCookie(...cookies)
     }
 
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 })
-
-    const title = await page.title()
-    if (title.includes('Just a moment')) {
-      await page.waitForFunction(() => !document.title.includes('Just a moment'), { timeout: 20000 })
-    }
-
-    await new Promise(r => setTimeout(r, 2000))
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 })
+    await new Promise(r => setTimeout(r, 3000))
     return await page.content()
   } finally {
     await browser.close()
