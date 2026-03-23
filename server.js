@@ -47,6 +47,8 @@ function parseMultiRowTable($, table) {
 
 function extractStats($) {
   const stats = { formats: [] }
+  const title = $('title').text().trim()
+  console.log(`[Scraper] Title: "${title}" | Tables: ${$('table').length}`)
 
   // Player name is in <h4>
   $('h4').each((_, el) => {
@@ -58,9 +60,8 @@ function extractStats($) {
   })
 
   // Fallback: title tag
-  if (!stats.name) {
-    const titleText = $('title').text().trim()
-    const titleMatch = titleText.match(/^([^-]+)/)
+  if (!stats.name && title) {
+    const titleMatch = title.match(/^([^-|]+)/)
     if (titleMatch) stats.name = titleMatch[1].trim()
   }
 
@@ -68,7 +69,7 @@ function extractStats($) {
   const battingRows = []
   const bowlingRows = []
 
-  $('table').each((_, table) => {
+  $('table').each((ti, table) => {
     const headers = []
     $(table).find('thead th').each((_, th) => {
       headers.push($(th).text().trim().toLowerCase())
@@ -76,16 +77,14 @@ function extractStats($) {
     if (headers.length === 0) return
 
     const headerStr = headers.join(' ')
-    // Check bowling first — its headers overlap with batting (inns, runs, ave, sr)
     const isBowling = /wkts|overs|econ/i.test(headerStr)
     const isBatting = !isBowling && /inns|runs|ave|sr/i.test(headerStr)
 
-    if (isBowling) {
+    if (isBowling || isBatting) {
       const rows = parseMultiRowTable($, table)
-      bowlingRows.push(...rows)
-    } else if (isBatting) {
-      const rows = parseMultiRowTable($, table)
-      battingRows.push(...rows)
+      console.log(`[Scraper] Table ${ti}: ${isBatting ? 'Batting' : 'Bowling'} found ${rows.length} rows`)
+      if (isBowling) bowlingRows.push(...rows)
+      else battingRows.push(...rows)
     }
   })
 
