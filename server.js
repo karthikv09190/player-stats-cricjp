@@ -9,13 +9,11 @@ const puppeteer = require('puppeteer')
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'https://karthikv09190.github.io',
-  ]
-}))
+app.use(cors()) // Allow all during debug
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
+  next()
+})
 app.use(express.json())
 
 // CricClubs uses <th> for ALL cells (both header and data rows).
@@ -183,7 +181,7 @@ app.get('/api/stats', async (req, res) => {
     else if (message.includes('ECONNREFUSED') || message.includes('ENOTFOUND')) message = 'Could not reach cricclubs.com — check your internet connection.'
     else if (message.includes('timeout') || message.includes('Timeout')) message = 'Page took too long to load. Try again.'
     console.error('Error:', message)
-    res.status(500).json({ error: message })
+    res.status(500).json({ error: message, debug: err instanceof Error ? err.stack : String(err) })
   }
 })
 
