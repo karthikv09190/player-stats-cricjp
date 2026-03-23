@@ -1,0 +1,188 @@
+import express from 'express'
+import * as cheerio from 'cheerio'
+import cors from 'cors'
+import { createRequire } from 'module'
+
+const require = createRequire(import.meta.url)
+const puppeteer = require('puppeteer')
+
+const app = express()
+const PORT = 3001
+
+app.use(cors())
+app.use(express.json())
+
+// CricClubs uses <th> for ALL cells (both header and data rows).
+// Data rows are in <tbody>, header rows in <thead>.
+
+function parseMultiRowTable($, table) {
+  // Get column headers from <thead> th elements
+  const headers = []
+  $(table).find('thead th').each((_, th) => {
+    headers.push($(th).text().trim().toLowerCase().replace(/\s+/g, ' '))
+  })
+  if (headers.length === 0) return []
+
+  // Parse each <tbody> row — cells are <th> or <td>
+  const rows = []
+  $(table).find('tbody tr').each((_, tr) => {
+    const cells = $(tr).find('th, td')
+    if (cells.length === 0) return
+    const row = {}
+    cells.each((i, cell) => {
+      const h = headers[i]
+      if (h) row[h] = $(cell).text().trim()
+    })
+    // Only keep rows with a series type label (skip expansion rows)
+    if (row['series type'] && row['series type'].length < 30) {
+      rows.push(row)
+    }
+  })
+  return rows
+}
+
+function extractStats($) {
+  const stats = { formats: [] }
+
+  // Player name is in <h4>
+  $('h4').each((_, el) => {
+    const text = $(el).text().trim()
+    if (text && text.length > 2 && text.length < 60 && !/player view|login|home|message/i.test(text)) {
+      stats.name = text
+      return false // break
+    }
+  })
+
+  // Fallback: title tag
+  if (!stats.name) {
+    const titleText = $('title').text().trim()
+    const titleMatch = titleText.match(/^([^-]+)/)
+    if (titleMatch) stats.name = titleMatch[1].trim()
+  }
+
+  // Parse tables
+  const battingRows = []
+  const bowlingRows = []
+
+  $('table').each((_, table) => {
+    const headers = []
+    $(table).find('thead th').each((_, th) => {
+      headers.push($(th).text().trim().toLowerCase())
+    })
+    if (headers.length === 0) return
+
+    const headerStr = headers.join(' ')
+    // Check bowling first — its headers overlap with batting (inns, runs, ave, sr)
+    const isBowling = /wkts|overs|econ/i.test(headerStr)
+    const isBatting = !isBowling && /inns|runs|ave|sr/i.test(headerStr)
+
+    if (isBowling) {
+      const rows = parseMultiRowTable($, table)
+      bowlingRows.push(...rows)
+    } else if (isBatting) {
+      const rows = parseMultiRowTable($, table)
+      battingRows.push(...rows)
+    }
+  })
+
+  // Deduplicate by series type and exclude sub-tables (tables 4+ are season/tournament breakdowns)
+  const seenBat = new Set()
+  const seenBowl = new Set()
+  const validRow = (r) => r['series type'] && !/practice|loading|t10/i.test(r['series type']) && r['series type'].length < 30
+
+  const mainBatting = battingRows.filter(r => {
+    if (!validRow(r)) return false
+    if (seenBat.has(r['series type'])) return false
+    seenBat.add(r['series type'])
+    return true
+  }).slice(0, 5)
+
+  const mainBowling = bowlingRows.filter(r => {
+    if (!validRow(r)) return false
+    if (seenBowl.has(r['series type'])) return false
+    seenBowl.add(r['series type'])
+    return true
+  }).slice(0, 5)
+
+  stats.batting = mainBatting
+  stats.bowling = mainBowling
+
+  return stats
+}
+
+async function fetchWithPuppeteer(url, cookieHeader) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  })
+
+  try {
+    const page = await browser.newPage()
+    await page.setUserAgent(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    )
+
+    if (cookieHeader && cookieHeader.trim()) {
+      const parsedUrl = new URL(url)
+      const cookies = cookieHeader.split(';').map(part => {
+        const [name, ...rest] = part.trim().split('=')
+        return { name: name.trim(), value: rest.join('=').trim(), domain: parsedUrl.hostname }
+      }).filter(c => c.name && c.value)
+      if (cookies.length > 0) await page.setCookie(...cookies)
+    }
+
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+
+    const title = await page.title()
+    if (title.includes('Just a moment')) {
+      await page.waitForFunction(() => !document.title.includes('Just a moment'), { timeout: 20000 })
+    }
+
+    await new Promise(r => setTimeout(r, 2000))
+    return await page.content()
+  } finally {
+    await browser.close()
+  }
+}
+
+app.get('/api/stats', async (req, res) => {
+  const { url, cookie } = req.query
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Missing url query parameter' })
+  }
+  if (!url.includes('cricclubs.com')) {
+    return res.status(400).json({ error: 'URL must be a cricclubs.com link' })
+  }
+
+  try {
+    console.log(`Fetching: ${url}`)
+    const html = await fetchWithPuppeteer(url, cookie)
+
+    if (html.includes('cf_chl_opt') || html.includes('Just a moment')) {
+      return res.status(403).json({
+        error: 'Cloudflare challenge could not be solved. Paste your browser cookies (including cf_clearance) and try again.',
+      })
+    }
+
+    const $ = cheerio.load(html)
+    $('script, style, nav, footer, header').remove()
+
+    const stats = extractStats($)
+    console.log('Name:', stats.name, '| Batting rows:', stats.batting?.length, '| Bowling rows:', stats.bowling?.length)
+    res.json({ stats, url })
+  } catch (err) {
+    let message = err instanceof Error ? err.message : 'Failed to fetch page'
+    if (message.includes('404')) message = 'Player page not found (404) — double-check the URL.'
+    else if (message.includes('ECONNREFUSED') || message.includes('ENOTFOUND')) message = 'Could not reach cricclubs.com — check your internet connection.'
+    else if (message.includes('timeout') || message.includes('Timeout')) message = 'Page took too long to load. Try again.'
+    console.error('Error:', message)
+    res.status(500).json({ error: message })
+  }
+})
+
+app.get('/health', (_, res) => res.json({ ok: true }))
+
+app.listen(PORT, () => {
+  console.log(`✅ CricClubs proxy server running at http://localhost:${PORT}`)
+})
