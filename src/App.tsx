@@ -118,7 +118,7 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('fetch') || msg.includes('Failed to fetch')) {
-        setError('Cannot reach the backend. Make sure node server.js is running.')
+        setError(`Cannot reach the backend at ${API_BASE}. Make sure the Render service is running and awake.`)
       } else {
         setError(msg)
       }
