@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 
+const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001'
+
 interface Player {
   id: string
   imageUrl: string
@@ -89,7 +91,7 @@ export default function Team() {
       setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'loading' } : x))
       try {
         const url = `https://cricclubs.com/${league}/viewPlayer.do?playerId=${p.id}&clubId=${clubId}`
-        const res = await fetch(`http://localhost:3001/api/stats?url=${encodeURIComponent(url)}`)
+        const res = await fetch(`${API_BASE}/api/stats?url=${encodeURIComponent(url)}`)
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Server error')
         const s = data.stats || {}

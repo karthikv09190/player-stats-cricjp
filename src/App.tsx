@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 
+const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001'
+
 interface FormatRow { [key: string]: string }
 interface Stats {
   name?: string
@@ -107,7 +109,7 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
     try {
       const params = new URLSearchParams({ url })
       if (cookie.trim()) params.set('cookie', cookie.trim())
-      const res = await fetch(`http://localhost:3001/api/stats?${params}`)
+      const res = await fetch(`${API_BASE}/api/stats?${params}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Server error')
       const s: Stats = data.stats || {}
