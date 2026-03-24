@@ -153,16 +153,29 @@ async function fetchWithPuppeteer(url, cookieHeader) {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled'],
+    args: [
+      '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
+      '--window-size=1280,800',
+    ],
   })
 
   try {
     const page = await browser.newPage()
+    await page.setViewport({ width: 1280, height: 800 })
     await page.setUserAgent(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     )
 
-    // Optimization: Skip images, CSS, and fonts to save RAM/Time
+    // Patch navigator to hide automation
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] })
+      window.chrome = { runtime: {} }
+    })
+
+    // Skip images, CSS, fonts to save RAM/time
     await page.setRequestInterception(true)
     page.on('request', (req) => {
       const type = req.resourceType()
