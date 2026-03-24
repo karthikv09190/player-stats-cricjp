@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || ''
+const DEFAULT_COOKIE = (import.meta.env.VITE_CC_COOKIE as string) || ''
 
 interface FormatRow { [key: string]: string }
 interface Stats {
@@ -65,7 +66,7 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
 
   const [playerName, setPlayerName] = useState('')
   const [playerId, setPlayerId] = useState('')
-  const [cookie, setCookie] = useState(() => localStorage.getItem('cc_cookie') || '')
+  const cookie = DEFAULT_COOKIE
   const [dragOver, setDragOver] = useState(false)
   const [playerImage, setPlayerImage] = useState<string | null>(null)
 
@@ -191,13 +192,7 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
           🔗 Will fetch: <code style={{ color: '#3ec96a' }}>cricclubs.com/{league}/viewPlayer.do?playerId={playerId || '...'}&clubId={clubId}</code>
         </div>
 
-        {/* Cookie */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={S.label}>🍪 Browser Cookies <span style={{ color: '#1a5c2e', fontWeight: 400, textTransform: 'none' }}>(paste from DevTools → Application → Cookies → cricclubs.com)</span></label>
-          <input style={{ ...S.input, fontFamily: 'monospace', fontSize: '0.78rem' }} value={cookie} onChange={e => { setCookie(e.target.value); localStorage.setItem('cc_cookie', e.target.value) }} placeholder="e.g. JSESSIONID=...; _ga=..." />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+<div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button style={{ ...S.btnPrimary, opacity: loading ? 0.6 : 1 }} onClick={fetchStats} disabled={loading}>
             {loading ? '⏳' : '🔍'} {loading ? 'Fetching... (~10s)' : 'Fetch Stats'}
           </button>

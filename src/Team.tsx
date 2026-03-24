@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 
 const API_BASE = (import.meta.env.VITE_API_URL as string) || ''
+const DEFAULT_COOKIE = (import.meta.env.VITE_CC_COOKIE as string) || ''
 
 interface Player {
   id: string
@@ -61,7 +62,7 @@ export default function Team() {
   const [teamB, setTeamB] = useState('')
   const [matchDate, setMatchDate] = useState('')
   const [venue, setVenue] = useState('')
-  const [cookie, setCookie] = useState(() => localStorage.getItem('cc_cookie') || '')
+  const cookie = DEFAULT_COOKIE
   const [showLineup, setShowLineup] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -166,20 +167,7 @@ export default function Team() {
           </div>
         )}
 
-        {/* Cookie */}
-        <div style={{ marginBottom: '0.9rem' }}>
-          <div style={{ fontSize: '0.68rem', color: '#a8c0b0', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.3rem' }}>
-            🍪 Browser Cookies <span style={{ color: '#1a5c2e', fontWeight: 400, textTransform: 'none' }}>(paste from DevTools → Application → Cookies → cricclubs.com)</span>
-          </div>
-          <input
-            style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.75rem' }}
-            value={cookie}
-            onChange={e => { setCookie(e.target.value); localStorage.setItem('cc_cookie', e.target.value) }}
-            placeholder="e.g. JSESSIONID=...; _ga=..."
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+<div style={{ display: 'flex', gap: '0.75rem' }}>
           <button onClick={fetchAll} disabled={fetching || players.length === 0} style={{ background: '#237a3d', color: '#fff', border: 'none', borderRadius: 8, padding: '0.65rem 1.4rem', fontSize: '0.9rem', fontWeight: 600, cursor: players.length === 0 || fetching ? 'not-allowed' : 'pointer', opacity: players.length === 0 || fetching ? 0.5 : 1 }}>
             {fetching ? '⏳ Fetching...' : '📊 Fetch All Stats'}
           </button>
