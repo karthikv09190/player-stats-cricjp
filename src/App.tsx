@@ -65,7 +65,7 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
 
   const [playerName, setPlayerName] = useState('')
   const [playerId, setPlayerId] = useState('')
-  const [cookie, setCookie] = useState('')
+  const [cookie, setCookie] = useState(() => localStorage.getItem('cc_cookie') || '')
   const [dragOver, setDragOver] = useState(false)
   const [playerImage, setPlayerImage] = useState<string | null>(null)
 
@@ -189,6 +189,12 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
 
         <div style={{ fontSize: '0.72rem', color: '#a8c0b0', marginBottom: '1rem', background: '#163824', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
           🔗 Will fetch: <code style={{ color: '#3ec96a' }}>cricclubs.com/{league}/viewPlayer.do?playerId={playerId || '...'}&clubId={clubId}</code>
+        </div>
+
+        {/* Cookie */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={S.label}>🍪 Browser Cookies <span style={{ color: '#1a5c2e', fontWeight: 400, textTransform: 'none' }}>(paste from DevTools → Application → Cookies → cricclubs.com)</span></label>
+          <input style={{ ...S.input, fontFamily: 'monospace', fontSize: '0.78rem' }} value={cookie} onChange={e => { setCookie(e.target.value); localStorage.setItem('cc_cookie', e.target.value) }} placeholder="e.g. JSESSIONID=...; _ga=..." />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
