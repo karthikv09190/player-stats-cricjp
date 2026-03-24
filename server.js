@@ -1,6 +1,7 @@
 import express from 'express'
 import * as cheerio from 'cheerio'
 import cors from 'cors'
+import axios from 'axios'
 import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
@@ -121,6 +122,20 @@ function extractStats($) {
   return stats
 }
 
+async function fetchWithAxios(url, cookieHeader) {
+  const res = await axios.get(url, {
+    timeout: 20000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://cricclubs.com/',
+      ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
+    },
+  })
+  return res.data
+}
+
 async function fetchWithPuppeteer(url, cookieHeader) {
   const browser = await puppeteer.launch({
     headless: true,
@@ -171,7 +186,16 @@ app.get('/api/stats', async (req, res) => {
 
   try {
     console.log(`Fetching: ${url}`)
-    const html = await fetchWithPuppeteer(url, cookie)
+    let html
+
+    // Try fast axios first — works when Cloudflare doesn't challenge
+    try {
+      html = await fetchWithAxios(url, cookie)
+      console.log('[axios] success')
+    } catch (axiosErr) {
+      console.log(`[axios] failed (${axiosErr.message}), falling back to Puppeteer`)
+      html = await fetchWithPuppeteer(url, cookie)
+    }
 
     if (html.includes('cf_chl_opt') || html.includes('Just a moment')) {
       return res.status(403).json({
