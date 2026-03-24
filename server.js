@@ -122,15 +122,28 @@ function extractStats($) {
   return stats
 }
 
+const SERVER_COOKIE = process.env.CC_COOKIE || ''
+
 async function fetchWithAxios(url, cookieHeader) {
+  const cookie = cookieHeader || SERVER_COOKIE
   const res = await axios.get(url, {
     timeout: 20000,
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'sec-ch-ua': '"Chromium";v="120", "Google Chrome";v="120", "Not-A.Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"macOS"',
       'Referer': 'https://cricclubs.com/',
-      ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
+      ...(cookie ? { 'Cookie': cookie } : {}),
     },
   })
   return res.data
@@ -157,6 +170,10 @@ async function fetchWithPuppeteer(url, cookieHeader) {
       else req.continue()
     })
 
+    const effectiveCookie = cookieHeader || SERVER_COOKIE
+    if (effectiveCookie && effectiveCookie.trim()) {
+      cookieHeader = effectiveCookie
+    }
     if (cookieHeader && cookieHeader.trim()) {
       const parsedUrl = new URL(url)
       const cookies = cookieHeader.split(';').map(part => {
