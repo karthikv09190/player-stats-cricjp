@@ -96,7 +96,9 @@ export default function Team() {
         const params = new URLSearchParams({ url })
         if (cookie.trim()) params.set('cookie', cookie.trim())
         const res = await fetch(`${API_BASE}/api/stats?${params}`)
-        const data = await res.json()
+        const text = await res.text()
+        let data: { stats?: { name?: string; batting?: Record<string,string>[]; bowling?: Record<string,string>[] }; error?: string }
+        try { data = JSON.parse(text) } catch { throw new Error('Cloudflare blocked the request') }
         if (!res.ok) throw new Error(data.error || 'Server error')
         const s = data.stats || {}
         const runs = (s.batting || []).reduce((a: number, r: Record<string, string>) => a + (parseInt(r['runs']) || 0), 0)

@@ -111,7 +111,9 @@ export default function App({ embedded }: { embedded?: boolean } = {}) {
       const params = new URLSearchParams({ url })
       if (cookie.trim()) params.set('cookie', cookie.trim())
       const res = await fetch(`${API_BASE}/api/stats?${params}`)
-      const data = await res.json()
+      const text = await res.text()
+      let data: { stats?: Stats; error?: string }
+      try { data = JSON.parse(text) } catch { throw new Error('Server returned an unexpected response. Cloudflare may be blocking the request.') }
       if (!res.ok) throw new Error(data.error || 'Server error')
       const s: Stats = data.stats || {}
       if (!s.batting?.length && !s.bowling?.length) setNoStats(true)

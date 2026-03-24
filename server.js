@@ -251,6 +251,12 @@ app.get('/api/stats', async (req, res) => {
 
 app.get('/health', (_, res) => res.json({ ok: true }))
 
+// Global JSON error handler — prevents Express from returning HTML error pages
+app.use((err, req, res, _next) => {
+  console.error('Unhandled error:', err)
+  res.status(500).json({ error: err.message || 'Internal server error' })
+})
+
 // Serve frontend static files if dist/ exists (production)
 const distPath = join(__dirname, 'dist')
 if (existsSync(distPath)) {
