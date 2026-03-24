@@ -64,6 +64,7 @@ export default function Team() {
   const [venue, setVenue] = useState('')
   const cookie = DEFAULT_COOKIE
   const [showLineup, setShowLineup] = useState(false)
+  const [fetchError, setFetchError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   function addFiles(files: FileList | null) {
@@ -86,8 +87,10 @@ export default function Team() {
     if (players.length === 0) return
     setFetching(true)
     setShowLineup(false)
+    setFetchError('')
     const league = getLeague()
     const clubId = getClubId()
+    let firstError = ''
 
     for (const p of players) {
       setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'loading' } : x))
@@ -98,17 +101,20 @@ export default function Team() {
         const res = await fetch(`${API_BASE}/api/stats?${params}`)
         const text = await res.text()
         let data: { stats?: { name?: string; batting?: Record<string,string>[]; bowling?: Record<string,string>[] }; error?: string }
-        try { data = JSON.parse(text) } catch { throw new Error('Cloudflare blocked the request') }
+        try { data = JSON.parse(text) } catch { throw new Error('Server returned non-JSON (Cloudflare may be blocking)') }
         if (!res.ok) throw new Error(data.error || 'Server error')
         const s = data.stats || {}
         const runs = (s.batting || []).reduce((a: number, r: Record<string, string>) => a + (parseInt(r['runs']) || 0), 0)
         const wkts = (s.bowling || []).reduce((a: number, r: Record<string, string>) => a + (parseInt(r['wkts']) || 0), 0)
         setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'done', runs, wkts, name: s.name || p.id } : x))
       } catch (err) {
-        console.error(`Error fetching player ${p.id}:`, err)
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`Error fetching player ${p.id}:`, msg)
+        if (!firstError) firstError = `Player ${p.id}: ${msg}`
         setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, status: 'error' } : x))
       }
     }
+    if (firstError) setFetchError(firstError)
 
     setFetching(false)
     setShowLineup(true)
@@ -169,7 +175,13 @@ export default function Team() {
           </div>
         )}
 
-<div style={{ display: 'flex', gap: '0.75rem' }}>
+        {fetchError && (
+          <div style={{ marginBottom: '0.9rem', background: 'rgba(224,85,85,0.1)', border: '1px solid rgba(224,85,85,0.3)', borderRadius: 8, padding: '0.75rem 1rem', color: '#e05555', fontSize: '0.82rem' }}>
+            ⚠️ {fetchError}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button onClick={fetchAll} disabled={fetching || players.length === 0} style={{ background: '#237a3d', color: '#fff', border: 'none', borderRadius: 8, padding: '0.65rem 1.4rem', fontSize: '0.9rem', fontWeight: 600, cursor: players.length === 0 || fetching ? 'not-allowed' : 'pointer', opacity: players.length === 0 || fetching ? 0.5 : 1 }}>
             {fetching ? '⏳ Fetching...' : '📊 Fetch All Stats'}
           </button>
